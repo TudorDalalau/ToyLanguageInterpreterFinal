@@ -58,6 +58,9 @@ public class Main extends Application {
         this.listOfProgramsController.addStatement(getEx11());
         this.listOfProgramsController.addStatement(getEx12());
         this.listOfProgramsController.addStatement(getEx13());
+        this.listOfProgramsController.addStatement(getEx14());
+        this.listOfProgramsController.addStatement(getEx15());
+
 
     }
 
@@ -175,5 +178,142 @@ public class Main extends Application {
                                                         new CompoundStatement(new PrintStatement(new VariableExpression("v")), new PrintStatement(new readFromHeap(new VariableExpression("a"))))))),
                                                 new CompoundStatement(new PrintStatement(new VariableExpression("v")), new PrintStatement(new readFromHeap(new VariableExpression("a")))))))));
     }
+
+    private static IStatement getEx14() {
+        // int a; int b; int c;
+        // a=1; b=2; c=5;
+        // switch(a*10)
+        //   case(b*c): print(a); print(b)
+        //   case(10): print(100); print(200)
+        //   default: print(300);
+        // print(300)
+        IStatement decl = new CompoundStatement(
+                new VariableDeclarationStatement("a", new IntType()),
+                new CompoundStatement(
+                        new VariableDeclarationStatement("b", new IntType()),
+                        new VariableDeclarationStatement("c", new IntType())
+                )
+        );
+
+        IStatement assigns = new CompoundStatement(
+                new AssignStatement("a", new ValueExpression(new IntValue(1))),
+                new CompoundStatement(
+                        new AssignStatement("b", new ValueExpression(new IntValue(2))),
+                        new AssignStatement("c", new ValueExpression(new IntValue(5)))
+                )
+        );
+
+        IStatement stmtCase1 = new CompoundStatement(
+                new PrintStatement(new VariableExpression("a")),
+                new PrintStatement(new VariableExpression("b"))
+        );
+
+        IStatement stmtCase2 = new CompoundStatement(
+                new PrintStatement(new ValueExpression(new IntValue(100))),
+                new PrintStatement(new ValueExpression(new IntValue(200)))
+        );
+
+        IStatement stmtDefault = new PrintStatement(new ValueExpression(new IntValue(300)));
+
+        IStatement sw = new SwitchStatement(
+                new ArithmeticExpression(new VariableExpression("a"), new ValueExpression(new IntValue(10)), "*"),
+                new ArithmeticExpression(new VariableExpression("b"), new VariableExpression("c"), "*"), stmtCase1,
+                new ValueExpression(new IntValue(10)), stmtCase2,
+                stmtDefault
+        );
+
+        return new CompoundStatement(
+                decl,
+                new CompoundStatement(
+                        assigns,
+                        new CompoundStatement(
+                                sw,
+                                new PrintStatement(new ValueExpression(new IntValue(300)))
+                        )
+                )
+        );
+    }
+
+    private static IStatement getEx15() {
+        // int v; int x; int y; v=0;
+        // (repeat (fork(print(v);v=v-1);v=v+1) until v==3);
+        // x=1;nop;y=3;nop;
+        // print(v*10)
+        //
+        // final Out should be {0,1,2,30}
+
+        IStatement decl = new CompoundStatement(
+                new VariableDeclarationStatement("v", new IntType()),
+                new CompoundStatement(
+                        new VariableDeclarationStatement("x", new IntType()),
+                        new VariableDeclarationStatement("y", new IntType())
+                )
+        );
+
+        IStatement initV = new AssignStatement("v", new ValueExpression(new IntValue(0)));
+
+        // fork(print(v); v = v - 1);
+        IStatement forkBody = new CompoundStatement(
+                new PrintStatement(new VariableExpression("v")),
+                new AssignStatement("v",
+                        new ArithmeticExpression(
+                                new VariableExpression("v"),
+                                new ValueExpression(new IntValue(1)),
+                                "-"
+                        )
+                )
+        );
+
+        IStatement repeatBody = new CompoundStatement(
+                new forkStatement(forkBody),
+                new AssignStatement("v",
+                        new ArithmeticExpression(
+                                new VariableExpression("v"),
+                                new ValueExpression(new IntValue(1)),
+                                "+"
+                        )
+                )
+        );
+
+        IExpression untilCond = new RelationalExpression(
+                new VariableExpression("v"),
+                new ValueExpression(new IntValue(3)),
+                "=="
+        );
+
+        IStatement repeatUntil = new RepeatUntilStatement(repeatBody, untilCond);
+
+        IStatement after = new CompoundStatement(
+                new AssignStatement("x", new ValueExpression(new IntValue(1))),
+                new CompoundStatement(
+                        new NoOperationStatement(),
+                        new CompoundStatement(
+                                new AssignStatement("y", new ValueExpression(new IntValue(3))),
+                                new CompoundStatement(
+                                        new NoOperationStatement(),
+                                        new PrintStatement(
+                                                new ArithmeticExpression(
+                                                        new VariableExpression("v"),
+                                                        new ValueExpression(new IntValue(10)),
+                                                        "*"
+                                                )
+                                        )
+                                )
+                        )
+                )
+        );
+
+        return new CompoundStatement(
+                decl,
+                new CompoundStatement(
+                        initV,
+                        new CompoundStatement(
+                                repeatUntil,
+                                after
+                        )
+                )
+        );
+    }
+
 
 }
